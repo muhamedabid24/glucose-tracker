@@ -1,14 +1,9 @@
-
 const pool = require("../db/pool");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const createToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "1d" });
 };
 
 // Register a new user
@@ -24,7 +19,8 @@ const register = async (req, res) => {
       typeof password !== "string" ||
       password.length < 8 ||
       Buffer.byteLength(password, "utf8") > 72 ||
-      name.trim().length > 100 || email.trim().length > 255
+      name.trim().length > 100 ||
+      email.trim().length > 255
     ) {
       return res.status(400).json({
         message:
@@ -34,10 +30,9 @@ const register = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const existing = await pool.query(
-      "SELECT id FROM users WHERE email = $1",
-      [normalizedEmail]
-    );
+    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [
+      normalizedEmail,
+    ]);
 
     if (existing.rows.length > 0) {
       return res.status(409).json({
@@ -51,7 +46,7 @@ const register = async (req, res) => {
       `INSERT INTO users (name, email, password_hash)
        VALUES ($1, $2, $3)
        RETURNING id, name, email`,
-      [name.trim(), normalizedEmail, passwordHash]
+      [name.trim(), normalizedEmail, passwordHash],
     );
 
     return res.status(201).json({
@@ -80,7 +75,8 @@ const login = async (req, res) => {
 
     if (
       typeof email !== "string" ||
-      typeof password !== "string" || Buffer.byteLength(password, "utf8") > 72
+      typeof password !== "string" ||
+      Buffer.byteLength(password, "utf8") > 72
     ) {
       return res.status(400).json({
         message: "Email and password are required.",
@@ -89,10 +85,9 @@ const login = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const result = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [normalizedEmail]
-    );
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      normalizedEmail,
+    ]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({
@@ -102,10 +97,7 @@ const login = async (req, res) => {
 
     const user = result.rows[0];
 
-    const isValid = await bcrypt.compare(
-      password,
-      user.password_hash
-    );
+    const isValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isValid) {
       return res.status(401).json({

@@ -39,13 +39,11 @@ afterAll(async () => {
   }
 });
 test("registration, password hashing, duplicate email and login", async () => {
-  const result = await request(app)
-    .post("/api/auth/register")
-    .send({
-      name: "Test User",
-      email: "TEST@example.test",
-      password: "Password123!",
-    });
+  const result = await request(app).post("/api/auth/register").send({
+    name: "Test User",
+    email: "TEST@example.test",
+    password: "Password123!",
+  });
   expect(result.status).toBe(201);
   userId = result.body.user.id;
   expect(result.body.user.password_hash).toBeUndefined();
@@ -61,13 +59,11 @@ test("registration, password hashing, duplicate email and login", async () => {
   ).toBe(true);
   expect(
     (
-      await request(app)
-        .post("/api/auth/register")
-        .send({
-          name: "Other",
-          email: "test@example.test",
-          password: "Password123!",
-        })
+      await request(app).post("/api/auth/register").send({
+        name: "Other",
+        email: "test@example.test",
+        password: "Password123!",
+      })
     ).status,
   ).toBe(409);
   const login = await request(app)
@@ -75,13 +71,11 @@ test("registration, password hashing, duplicate email and login", async () => {
     .send({ email: "TEST@example.test", password: "Password123!" });
   expect(login.status).toBe(200);
   token = login.body.token;
-  const other = await request(app)
-    .post("/api/auth/register")
-    .send({
-      name: "Other",
-      email: "other@example.test",
-      password: "Password123!",
-    });
+  const other = await request(app).post("/api/auth/register").send({
+    name: "Other",
+    email: "other@example.test",
+    password: "Password123!",
+  });
   otherToken = jwt.sign({ userId: other.body.user.id }, process.env.JWT_SECRET);
 });
 test("invalid registration and wrong credentials", async () => {
@@ -118,7 +112,7 @@ test("protected endpoints reject missing, invalid and expired tokens", async () 
     ).toBe(401);
   }
 });
-test.each([39, 601, 100.5, undefined, null, "100"])(
+test.each([39, 601, 100.5, undefined, null, "100", 108.5, -1, "invalid", ""])(
   "reject invalid value %s on create and edit",
   async (value) => {
     expect((await post(reading({ value }))).status).toBe(400);
@@ -326,4 +320,115 @@ test("calendar today follows the configured timezone near UTC midnight", () => {
     if (originalTimezone === undefined) delete process.env.APP_TIMEZONE;
     else process.env.APP_TIMEZONE = originalTimezone;
   }
+});
+
+test.each([40, 108, 600])(
+  "accepted value %s persists through create, edit, read and delete",
+  async (value) => {
+    const body = reading({ date: "2024-09-01", value });
+    const created = await post(body);
+    expect(created.status).toBe(201);
+    const id = created.body.reading.id;
+    const changed = await request(app)
+      .put("/api/readings/" + id)
+      .auth(token, { type: "bearer" })
+      .send({ ...body, slot: SLOTS[1] });
+    expect(changed.status).toBe(200);
+    const stored = await pool.query(
+      "SELECT reading_date::text AS date,slot,value_mg_dl FROM readings WHERE id=$1 AND user_id=$2",
+      [id, userId],
+    );
+    expect(stored.rows[0]).toEqual({
+      date: body.date,
+      slot: SLOTS[1],
+      value_mg_dl: value,
+    });
+    const list = await request(app)
+      .get("/api/readings?date=" + body.date)
+      .auth(token, { type: "bearer" });
+    expect(list.body.readings).toContainEqual({
+      id,
+      date: body.date,
+      slot: SLOTS[1],
+      value,
+    });
+    expect(
+      (
+        await request(app)
+          .delete("/api/readings/" + id)
+          .auth(token, { type: "bearer" })
+      ).status,
+    ).toBe(200);
+    expect(
+      (await pool.query("SELECT id FROM readings WHERE id=$1", [id])).rows,
+    ).toEqual([]);
+  },
+);
+test("mutating reading routes reject requests without a token", async () => {
+  expect(
+    (await request(app).post("/api/readings").send(reading())).status,
+  ).toBe(401);
+  expect(
+    (await request(app).put("/api/readings/1").send(reading())).status,
+  ).toBe(401);
+  expect((await request(app).delete("/api/readings/1")).status).toBe(401);
+});
+test("two users may independently save the same date and slot without leaking data", async () => {
+  const body = reading({ date: "2024-08-01", slot: "After lunch", value: 108 });
+  const owned = await post({ ...body, user_id: -1 });
+  expect(owned.status).toBe(201);
+  const other = await request(app)
+    .post("/api/readings")
+    .auth(otherToken, { type: "bearer" })
+    .send({ ...body, value: 120 });
+  expect(other.status).toBe(201);
+  expect(
+    (
+      await request(app)
+        .put("/api/readings/" + owned.body.reading.id)
+        .auth(otherToken, { type: "bearer" })
+        .send({ ...body, value: 600 })
+    ).status,
+  ).toBe(404);
+  for (const [accessToken, expected] of [
+    [token, 108],
+    [otherToken, 120],
+  ]) {
+    const response = await request(app)
+      .get("/api/readings?date=" + body.date)
+      .auth(accessToken, { type: "bearer" });
+    expect(response.status).toBe(200);
+    expect(response.body.readings).toHaveLength(1);
+    expect(response.body.readings[0].value).toBe(expected);
+  }
+});
+test("After lunch duplicate and fifth daily entry are rejected on create and edit", async () => {
+  const body = reading({ date: "2024-07-01" });
+  let id;
+  for (const slot of SLOTS) {
+    const result = await post({ ...body, slot });
+    expect(result.status).toBe(201);
+    if (slot === SLOTS[0]) id = result.body.reading.id;
+  }
+  const duplicate = await post({ ...body, slot: "After lunch" });
+  expect(duplicate.status).toBe(409);
+  expect(duplicate.body.message).toMatch(/already exists/);
+  expect(
+    (
+      await request(app)
+        .put("/api/readings/" + id)
+        .auth(token, { type: "bearer" })
+        .send({ ...body, slot: "After lunch" })
+    ).status,
+  ).toBe(409);
+  const count = await pool.query(
+    "SELECT count(*)::int AS count FROM readings WHERE user_id=$1 AND reading_date=$2",
+    [userId, body.date],
+  );
+  expect(count.rows[0].count).toBe(4);
+});
+test("report ranges match the October 2026 assignment example", () => {
+  expect(range("daily", "2026-10-15")).toEqual(["2026-10-15", "2026-10-15"]);
+  expect(range("mtd", "2026-10-15")).toEqual(["2026-10-01", "2026-10-15"]);
+  expect(range("monthly", "2026-10-15")).toEqual(["2026-09-01", "2026-09-30"]);
 });

@@ -157,3 +157,68 @@ test("cleanup removes listeners, cancels timers and prevents late updates", asyn
   assert.equal(state.configs.length, 0);
   assert.equal(state.timers.size, 0);
 });
+
+for (const [instant, before, after] of [
+  ["2026-12-31T18:29:59.900Z", "2026-12-31", "2027-01-01"],
+  ["2024-02-28T18:29:59.900Z", "2024-02-28", "2024-02-29"],
+  ["2024-02-29T18:29:59.900Z", "2024-02-29", "2024-03-01"],
+]) {
+  test(`server-date rollover ${before} to ${after}`, async () => {
+    const state = fixture({
+      instant,
+      load: (_, call) =>
+        Promise.resolve({
+          today: call === 1 ? before : after,
+          timezone: "Asia/Kolkata",
+        }),
+    });
+    await settle();
+    assert.equal(state.configs.at(-1).today, before);
+    const timer = [...state.timers.values()][0];
+    assert.equal(timer.delay, 150);
+    state.setTime(
+      new Date(new Date(instant).getTime() + timer.delay).toISOString(),
+    );
+    timer.fn();
+    await settle();
+    assert.equal(state.configs.at(-1).today, after);
+    state.stop();
+  });
+}
+test("configured timezone schedules refresh while server date remains authoritative", async () => {
+  const state = fixture({
+    instant: "2026-11-13T07:59:59.900Z",
+    load: () =>
+      Promise.resolve({ today: "2026-11-12", timezone: "America/Los_Angeles" }),
+  });
+  await settle();
+  assert.equal(state.configs[0].today, "2026-11-12");
+  assert.equal([...state.timers.values()][0].delay, 150);
+  state.stop();
+});
+test("invalid refresh timezone cannot replace a successful configuration", async () => {
+  const state = fixture({
+    load: (_, call) =>
+      Promise.resolve({
+        today: "2026-11-12",
+        timezone: call === 1 ? "Asia/Kolkata" : "Not/A_Timezone",
+      }),
+  });
+  await settle();
+  state.windowTarget.dispatchEvent(new Event("focus"));
+  await settle();
+  assert.equal(state.configs.length, 1);
+  assert.equal(state.errors.length, 1);
+  assert.equal(state.timers.size, 1);
+  state.stop();
+});
+test("cleanup after success cancels scheduled polling and reconnect listeners", async () => {
+  const state = fixture();
+  await settle();
+  assert.equal(state.timers.size, 1);
+  state.stop();
+  assert.equal(state.timers.size, 0);
+  state.windowTarget.dispatchEvent(new Event("online"));
+  await settle();
+  assert.equal(state.calls, 1);
+});

@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { api } from "./api";
 import "./styles.css";
+import {
+  DailyOverview,
+  KpiCards,
+  MonthlyAnalytics,
+  DeleteDialog,
+} from "./components/JournalPanels";
 const SLOTS = [
   "Morning (fasting)",
   "After breakfast",
@@ -38,15 +44,29 @@ function App() {
   }, [retry]);
   return (
     <div className="shell">
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <header className="topbar">
         <a className="brand" href="/" aria-label="Sweety home">
-          <span className="brand-icon">s</span>sweety
+          <span className="brand-icon" aria-hidden="true">
+            s
+          </span>
+          sweety
           <span className="brand-dot">.</span>
         </a>
-        <span className="top-label">YOUR PERSONAL GLUCOSE JOURNAL</span>
+        {token && (
+          <nav className="header-nav" aria-label="Main navigation">
+            <a href="#main-content" aria-current="page">
+              Overview
+            </a>
+            <a href="#reading-history">History</a>
+          </nav>
+        )}
+        <span className="top-label">Personal glucose journal</span>
         {token && (
           <button className="quiet" onClick={() => logout()}>
-            Log out ?
+            Log out
           </button>
         )}
       </header>
@@ -57,7 +77,7 @@ function App() {
         >
           {notice.text}
           <button aria-label="Dismiss message" onClick={() => setNotice(null)}>
-            ?
+            Close
           </button>
         </div>
       )}
@@ -80,8 +100,8 @@ function App() {
           logout={logout}
         />
       ) : (
-        <main className="panel connection" role="status">
-          {configError || "Connecting to your journal?"}
+        <main id="main-content" className="panel connection" role="status">
+          {configError || "Connecting to your journal..."}
           {configError && (
             <button onClick={() => setRetry((value) => value + 1)}>
               Retry connection
@@ -129,7 +149,7 @@ function Auth({ register, setRegister, onLogin, notice }) {
     }
   }
   return (
-    <main className="auth-layout">
+    <main id="main-content" className="auth-layout" tabIndex="-1">
       <section className="auth-intro">
         <span className="eyebrow">A LITTLE CHECK-IN. A CLEARER PICTURE.</span>
         <h1>
@@ -141,18 +161,6 @@ function Auth({ register, setRegister, onLogin, notice }) {
           Keep your glucose readings in one calm place. See your patterns, one
           day at a time.
         </p>
-        <div className="illustration" aria-hidden="true">
-          <div className="orbit"></div>
-          <span className="spark">?</span>
-          <div className="sample">
-            <span>YOUR DAILY CHECK-IN</span>
-            <strong>
-              108 <small>mg/dl</small>
-            </strong>
-            <div className="sample-line">? ? ? ? ? ? ? ? ?</div>
-            <span>A habit worth keeping.</span>
-          </div>
-        </div>
       </section>
       <section className="panel auth-card">
         <span className="eyebrow">WELCOME TO SWEETY</span>
@@ -203,7 +211,7 @@ function Auth({ register, setRegister, onLogin, notice }) {
             </p>
           )}
           <button className="primary full" disabled={busy}>
-            {busy ? "Please wait?" : register ? "Create account ?" : "Log in ?"}
+            {busy ? "Please wait..." : register ? "Create account" : "Log in"}
           </button>
         </form>
         <p className="switch">
@@ -276,18 +284,19 @@ function Dashboard({ token, config, notice, logout }) {
       setDeleteBusy(false);
     }
   }
+  useEffect(() => {
+    if (editing) formRef.current?.querySelector("input")?.focus();
+  }, [editing]);
   return (
-    <main>
+    <main id="main-content" tabIndex="-1">
       <div className="dashboard-heading">
         <div>
-          <span className="eyebrow">YOUR HEALTH, ONE DAY AT A TIME</span>
-          <h1>
-            Your glucose journal<span className="brand-dot">.</span>
-          </h1>
-          <p>A daily habit. A clearer view of your numbers.</p>
+          <span className="eyebrow">PERSONAL HEALTH / OVERVIEW</span>
+          <h1>Your glucose journal</h1>
+          <p>Record your readings and review your daily patterns.</p>
         </div>
         <label className="date-picker">
-          REPORT DATE
+          Report date
           <input
             type="date"
             value={date}
@@ -307,11 +316,18 @@ function Dashboard({ token, config, notice, logout }) {
           <button onClick={() => setRevision((v) => v + 1)}>Retry</button>
         </div>
       )}
+      <KpiCards
+        report={reports?.[0]}
+        loading={loading}
+        error={Boolean(error)}
+      />
       <div className="dashboard-grid">
         <section className="panel reading-form" ref={formRef}>
-          <div className="section-icon">?</div>
+          <div className="section-icon" aria-hidden="true">
+            +
+          </div>
           <h2>{editing ? "Edit reading" : "Add a reading"}</h2>
-          <p>A quick check-in for your journal.</p>
+          <p>Keep your daily journal up to date.</p>
           <ReadingForm
             key={editing?.id || "new"}
             editing={editing}
@@ -327,40 +343,51 @@ function Dashboard({ token, config, notice, logout }) {
             onUnauthorized={logout}
           />
         </section>
-        <section className="reports" aria-busy={loading}>
-          <div className="section-title">
-            <h2>Your snapshot</h2>
-            <span className="unit">ALL VALUES IN mg/dl</span>
-          </div>
+        <section
+          className="reports"
+          aria-label="Daily readings and analytics"
+          aria-busy={loading}
+        >
           {loading ? (
             <div className="panel skeleton" role="status">
-              Loading your reports?
+              Loading your readings and reports...
             </div>
           ) : (
-            reports &&
-            reports.map((report, i) => (
-              <Report
-                key={report.type}
-                report={report}
-                title={["Daily", "Month to date", "Previous month"][i]}
-              />
-            ))
+            !error &&
+            reports && (
+              <>
+                <DailyOverview report={reports[0]} />
+                <MonthlyAnalytics
+                  reports={reports.slice(1)}
+                  history={history}
+                />
+              </>
+            )
           )}
         </section>
       </div>
-      <section className="panel history">
+      <section
+        id="reading-history"
+        className="panel history"
+        aria-labelledby="history-heading"
+      >
         <div className="section-title">
           <div>
             <span className="eyebrow">THE BIGGER PICTURE</span>
-            <h2>Reading history</h2>
+            <h2 id="history-heading">Reading history</h2>
           </div>
           <span className="badge">
-            {loading ? "?" : history.length} readings
+            {loading ? "..." : error ? "\u2014" : history.length} readings
           </span>
         </div>
         <p>Your complete journal, with the latest dates first.</p>
         {loading ? (
-          <p role="status">Loading readings?</p>
+          <p role="status">Loading readings...</p>
+        ) : error ? (
+          <p className="empty">
+            Readings could not be refreshed. Use Retry above to reload your
+            journal.
+          </p>
         ) : !history.length ? (
           <div className="empty">
             Your journal starts with one reading. Add your first check-in above.
@@ -368,12 +395,15 @@ function Dashboard({ token, config, notice, logout }) {
         ) : (
           <div className="table-scroll">
             <table>
+              <caption className="sr-only">
+                All saved glucose readings, latest dates first
+              </caption>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Slot</th>
-                  <th>Glucose</th>
-                  <th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Time of day</th>
+                  <th scope="col">Glucose</th>
+                  <th scope="col">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -385,14 +415,15 @@ function Dashboard({ token, config, notice, logout }) {
                     <td>{row.slot}</td>
                     <td>
                       <strong>{row.value}</strong>{" "}
-                      <span className="muted">mg/dl</span>
+                      <span className="muted">mg/dL</span>
                     </td>
                     <td className="actions">
                       <button
+                        aria-label={`Edit ${row.slot} reading on ${formatDate(row.date)}`}
                         onClick={() => {
                           setEditing(row);
                           formRef.current?.scrollIntoView({
-                            behavior: "smooth",
+                            behavior: "instant",
                             block: "start",
                           });
                         }}
@@ -401,6 +432,7 @@ function Dashboard({ token, config, notice, logout }) {
                       </button>
                       <button
                         className="danger"
+                        aria-label={`Delete ${row.slot} reading on ${formatDate(row.date)}`}
                         onClick={() => setDeleting(row)}
                       >
                         Delete
@@ -414,37 +446,12 @@ function Dashboard({ token, config, notice, logout }) {
         )}
       </section>
       {deleting && (
-        <div className="modal-backdrop">
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-title"
-            className="panel modal"
-          >
-            <h2 id="delete-title">Delete this reading?</h2>
-            <p>
-              {formatDate(deleting.date)} ? {deleting.slot} ? {deleting.value}{" "}
-              mg/dl
-            </p>
-            <p>This action cannot be undone.</p>
-            <div className="button-row">
-              <button
-                autoFocus
-                disabled={deleteBusy}
-                onClick={() => setDeleting(null)}
-              >
-                Keep reading
-              </button>
-              <button
-                className="primary danger-bg"
-                disabled={deleteBusy}
-                onClick={remove}
-              >
-                {deleteBusy ? "Deleting?" : "Delete reading"}
-              </button>
-            </div>
-          </section>
-        </div>
+        <DeleteDialog
+          reading={deleting}
+          busy={deleteBusy}
+          onClose={() => setDeleting(null)}
+          onDelete={remove}
+        />
       )}
     </main>
   );
@@ -472,7 +479,7 @@ function ReadingForm({
       Number(value) < 40 ||
       Number(value) > 600
     ) {
-      setError("Enter a whole number from 40 to 600 mg/dl.");
+      setError("Enter a whole number from 40 to 600 mg/dL.");
       return;
     }
     if (!date || date > config.today) {
@@ -504,7 +511,7 @@ function ReadingForm({
     }
   }
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} aria-busy={busy}>
       <label>
         Date
         <input
@@ -525,7 +532,7 @@ function ReadingForm({
         </select>
       </label>
       <label>
-        Glucose value <span className="muted">(mg/dl)</span>
+        Glucose value <span className="muted">(mg/dL)</span>
         <input
           type="number"
           inputMode="numeric"
@@ -533,11 +540,12 @@ function ReadingForm({
           max="600"
           step="1"
           placeholder="e.g. 108"
+          aria-describedby="glucose-hint"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           required
         />
-        <small>Whole numbers between 40 and 600.</small>
+        <small id="glucose-hint">Whole numbers between 40 and 600 mg/dL.</small>
       </label>
       {error && (
         <p className="field-error" role="alert">
@@ -545,7 +553,7 @@ function ReadingForm({
         </p>
       )}
       <button className="primary full" disabled={busy}>
-        {busy ? "Saving?" : editing ? "Save changes" : "? Add reading"}
+        {busy ? "Saving..." : editing ? "Save changes" : "+ Add reading"}
       </button>
       {editing && (
         <button
@@ -568,51 +576,5 @@ function formatDate(date) {
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(date + "T00:00:00Z"));
-}
-function Report({ report, title }) {
-  return (
-    <article className="panel report">
-      <div className="section-title">
-        <h3>{title}</h3>
-        <span className="report-date">
-          {formatDate(report.start)}
-          {report.start !== report.end ? " ? " + formatDate(report.end) : ""}
-        </span>
-      </div>
-      {!report.count ? (
-        <p className="empty">
-          No readings for this period. Your next check-in will appear here.
-        </p>
-      ) : (
-        <>
-          <dl className="stats">
-            {[
-              ["Highest", report.highest],
-              ["Lowest", report.lowest],
-              ["Average", report.average.toFixed(1)],
-              ["Readings", report.count],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-          {report.type === "daily" && (
-            <ul className="daily-list">
-              {report.readings.map((row) => (
-                <li key={row.id}>
-                  <span>{row.slot}</span>
-                  <strong>
-                    {row.value} <small>mg/dl</small>
-                  </strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-    </article>
-  );
 }
 createRoot(document.getElementById("root")).render(<App />);

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { api } from "./api";
+import { watchReportingDate } from "./reportingDate";
 import "./styles.css";
 import {
   DailyOverview,
@@ -30,17 +31,17 @@ function App() {
     setNotice(message ? { error: true, text: message } : null);
   }
   useEffect(() => {
-    const controller = new AbortController();
-    setConfigError("");
-    api("/config", { signal: controller.signal })
-      .then(setConfig)
-      .catch((error) => {
-        if (error.name !== "AbortError")
-          setConfigError(
-            "Cannot connect to the API. Check that the server is running.",
-          );
-      });
-    return () => controller.abort();
+    return watchReportingDate({
+      loadConfig: (signal) => api("/config", { signal }),
+      onConfig: (freshConfig) => {
+        setConfig(freshConfig);
+        setConfigError("");
+      },
+      onError: () =>
+        setConfigError(
+          "Cannot connect to the API. Check that the server is running.",
+        ),
+    });
   }, [retry]);
   return (
     <div className="shell">

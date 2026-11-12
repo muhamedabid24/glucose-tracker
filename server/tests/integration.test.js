@@ -106,3 +106,15 @@ test('delete owned reading, missing ID and bad report parameters', async () => {
     expect((await request(app).get('/api/reports?'+query).auth(token,{type:'bearer'})).status).toBe(400);
   }
 });
+
+test('calendar today follows the configured timezone near UTC midnight', () => {
+  const originalTimezone = process.env.APP_TIMEZONE;
+  jest.useFakeTimers().setSystemTime(new Date('2024-03-31T20:00:00Z'));
+  try {
+    process.env.APP_TIMEZONE='Asia/Kolkata'; expect(today()).toBe('2024-04-01');
+    process.env.APP_TIMEZONE='America/Los_Angeles'; expect(today()).toBe('2024-03-31');
+  } finally {
+    jest.useRealTimers();
+    if(originalTimezone===undefined)delete process.env.APP_TIMEZONE;else process.env.APP_TIMEZONE=originalTimezone;
+  }
+});

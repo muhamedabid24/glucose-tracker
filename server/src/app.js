@@ -10,6 +10,7 @@ app.use('/api/readings', require('./routes/readingRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use((req, res) => res.status(404).json({ message: 'Endpoint not found.' }));
 app.use((error, req, res, next) => {
+  if (error.code === '23503') return res.status(401).json({ message: 'Account no longer exists. Please log in again.' });
   if (error.code === '23505') return res.status(409).json({ message: 'A reading already exists for that date and slot. Edit it instead.' });
   if (['23514', '23502', '22P02', '22007', '22008'].includes(error.code)) return res.status(400).json({ message: 'Invalid reading. Check the date, slot and glucose value.' });
   if (error.type === 'entity.parse.failed') return res.status(400).json({ message: 'Request body must be valid JSON.' });

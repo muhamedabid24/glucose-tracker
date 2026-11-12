@@ -15,8 +15,8 @@ router.get('/', async (req, res, next) => {
       ORDER BY reading_date, array_position($4::text[], slot), id`, [req.userId, start, end, SLOTS]);
     const values = result.rows.map(row => row.value);
     const count = values.length;
-    const stats = { count, highest: count ? Math.max(...values) : null,
-      lowest: count ? Math.min(...values) : null,
+    const stats = { count, highest: count ? values.reduce((max, value) => Math.max(max, value), values[0]) : null,
+      lowest: count ? values.reduce((min, value) => Math.min(min, value), values[0]) : null,
       average: count ? Number((values.reduce((sum, value) => sum + value, 0) / count).toFixed(1)) : null };
     res.json({ type, start, end, ...stats, readings: type === 'daily' ? result.rows : [] });
   } catch (error) { next(error); }

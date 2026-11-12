@@ -3,7 +3,7 @@
 :root {
   font-family: "Inter", sans-serif;
   color: #123d38;
-  background: #f7faf9;
+  background: #f5f8f7;
   font-synthesis: none;
   --accent: #0f766e;
   --muted: #64748b;
@@ -48,6 +48,16 @@ button:hover {
 button:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+/* Feedback belongs to controls; informational cards remain static. */
+button,
+input,
+select,
+.header-nav a {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
 }
 :where(button, a, input, select):focus-visible {
   outline: 3px solid #0f766e;
@@ -209,6 +219,40 @@ p {
 }
 .kpi-card {
   padding: 20px 22px;
+  background: var(--kpi-background);
+  border-color: var(--kpi-border);
+}
+/* Category colors identify widgets, not clinical ranges or health status. */
+.kpi-0 {
+  --kpi-background: #fff1ea;
+  --kpi-accent: #b75c35;
+  --kpi-border: #f1d9cd;
+  --kpi-icon-background: #fbe2d6;
+}
+.kpi-1 {
+  --kpi-background: #eaf4ff;
+  --kpi-accent: #2563a6;
+  --kpi-border: #d0e3f6;
+  --kpi-icon-background: #d9eaff;
+}
+.kpi-2 {
+  --kpi-background: #e6f5f0;
+  --kpi-accent: #087c69;
+  --kpi-border: #c4e5db;
+  --kpi-icon-background: #cdebe1;
+}
+.kpi-3 {
+  --kpi-background: #f1edff;
+  --kpi-accent: #7554b6;
+  --kpi-border: #ded5f5;
+  --kpi-icon-background: #e4dcfa;
+}
+.kpi-card,
+.reading-form,
+.daily-panel,
+.analytics,
+.history {
+  box-shadow: 0 3px 12px #123d3808;
 }
 .kpi-label {
   display: flex;
@@ -219,7 +263,7 @@ p {
   font-family: Inter, sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: var(--muted);
+  color: #123d38;
   letter-spacing: 0;
 }
 .metric-icon {
@@ -228,8 +272,8 @@ p {
   border-radius: 9px;
   display: grid;
   place-items: center;
-  background: #edf6f3;
-  color: var(--accent);
+  background: var(--kpi-icon-background);
+  color: var(--kpi-accent);
   font-size: 18px;
 }
 .kpi-value {
@@ -246,15 +290,15 @@ p {
   font:
     400 11px Inter,
     sans-serif;
-  color: var(--muted);
+  color: #536376;
   letter-spacing: 0;
 }
 .kpi-context {
   font-size: 10px;
-  color: var(--muted);
+  color: #536376;
 }
 .kpi-2 {
-  border-top: 3px solid var(--accent);
+  border-top: 3px solid var(--kpi-accent);
   padding-top: 18px;
 }
 .dashboard-grid {
@@ -266,6 +310,12 @@ p {
 .reading-form {
   position: sticky;
   top: 20px;
+  background: #f0f9f5;
+  border-color: #d3e9df;
+}
+.daily-panel {
+  background: #f8fbff;
+  border-color: #dce7f2;
 }
 .section-icon {
   display: grid;
@@ -409,6 +459,8 @@ small {
 }
 .analytics {
   margin-top: 22px;
+  background: #faf8ff;
+  border-color: #e8e1f3;
 }
 .unit {
   border: 1px solid var(--border);
@@ -479,9 +531,12 @@ small {
   border-radius: 12px;
 }
 .previous-month {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #efe0d2;
   padding-top: 20px;
   margin-top: 22px;
+  background: #fffaf5;
+  border-radius: 12px;
+  box-shadow: 0 0 0 10px #fffaf5;
 }
 .previous-month .stats {
   margin-bottom: 0;
@@ -493,6 +548,8 @@ small {
 .history {
   margin-top: 24px;
   scroll-margin-top: 20px;
+  background: #fff;
+  border-color: #dce7e3;
 }
 .history h2 {
   margin-top: 5px;
@@ -894,5 +951,6 @@ footer {
   *::before,
   *::after {
     scroll-behavior: auto !important;
+    transition: none !important;
   }
 }

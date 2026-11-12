@@ -90,6 +90,9 @@ main:focus {
   letter-spacing: -1px;
 }
 .brand-icon {
+  flex-shrink: 0;
+  letter-spacing: 0;
+  line-height: 1;
   display: grid;
   place-items: center;
   width: 36px;

@@ -48,11 +48,11 @@ function App() {
         Skip to main content
       </a>
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Sweety home">
+        <a className="brand" href="/" aria-label="Glucon home">
           <span className="brand-icon" aria-hidden="true">
-            s
+            G
           </span>
-          sweety
+          glucon
           <span className="brand-dot">.</span>
         </a>
         {token && (
@@ -163,7 +163,7 @@ function Auth({ register, setRegister, onLogin, notice }) {
         </p>
       </section>
       <section className="panel auth-card">
-        <span className="eyebrow">WELCOME TO SWEETY</span>
+        <span className="eyebrow">WELCOME TO GLUCON</span>
         <h2>{register ? "Start your journal" : "Welcome back"}</h2>
         <p>
           {register

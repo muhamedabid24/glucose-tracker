@@ -1,34 +1,49 @@
-# Screenshots, manual QA and 2?3 minute demo
+# Glucon - manual QA and submission captures
 
-Run Express and Vite as described in the root README. Use the seeded demo account, never a real user's data. This folder intentionally contains capture instructions rather than fabricated screenshots.
+This folder contains instructions, not proof that browser testing or recording has happened. Automated backend/date-refresh checks and a successful production build do not establish browser functionality. Mark a check complete only after performing it.
 
-## Manual checks before submission
+## Safe setup
 
-1. Register a fresh account, log in, log out, and verify protected data disappears. Try an incorrect password.
-2. Add all four daily slots. Try a duplicate, a future date, 39, 601, a decimal and an empty value; confirm clear errors. Confirm 40 and 600 are accepted.
-3. Edit a reading, change its date/slot, and verify reports refresh. Cancel a delete, then confirm a delete.
-4. Change report date; inspect daily slots, MTD and the previous month. Check an empty period. The seed includes previous-month data.
-5. Check the layout on a desktop and at 390px viewport width, scroll the history table, and navigate forms with the keyboard.
-6. Stop the API temporarily and verify a readable connection error; restart and retry.
+1. Follow the root README to start Express and Vite. Use a separate demo/test database or an explicitly disposable test account for destructive manual checks. Do not modify another user's stored readings.
+2. Keep real passwords, `.env` files, tokens, Authorization headers and personal records out of captures. The existing demo credentials are documented in the root README.
+3. Open http://localhost:5173 and keep browser developer tools available to inspect unexpected errors. Do not capture sensitive network details.
 
-## Screenshots
+## Required manual checks (not yet verified)
 
-Use your browser/OS screenshot feature and save PNG files here:
+- [ ] Register a disposable account; reject invalid input and duplicate email.
+- [ ] Log in; reject wrong credentials; log out; verify protected data is no longer displayed.
+- [ ] Add readings and verify they appear in history, daily KPIs and the daily list.
+- [ ] Accept 40, 108 and 600. Reject blank, 39, 601, 108.5, negative and nonnumeric values on create and edit.
+- [ ] Fill all four allowed slots on one date. Reject a duplicate After lunch and any fifth entry with a meaningful error.
+- [ ] Reject future dates on both create and edit.
+- [ ] Edit value/date/slot; verify history and reports update. Cancel a delete, then delete an owned disposable reading and verify it disappears.
+- [ ] Select 15 October 2026: daily is 15 October, MTD is 1-15 October, previous month is 1-30 September. Check values against known disposable sample data.
+- [ ] Inspect an empty period, the MTD trend chart, loading state and an API failure/retry state.
+- [ ] Confirm a second account cannot see or modify the first account's readings.
+- [ ] At desktop (~1440px), tablet (~768px) and mobile (~390px), verify readable cards/forms, accessible table scrolling and no unwanted page overflow.
+- [ ] Use only the keyboard: reach navigation and fields, edit a reading, open delete confirmation, cancel with Escape and confirm focus returns.
+- [ ] Verify Glucon title/logo/welcome branding, readable focus indicators and no unexpected browser-console errors.
 
-- `01-login.png` ? login or registration page.
-- `02-dashboard.png` ? populated daily report and add form.
-- `03-history-edit.png` ? history and editing state.
-- `04-validation.png` ? a duplicate or invalid reading message.
-- `05-mobile.png` ? dashboard at a narrow mobile viewport.
+## Reporting-date regression checks
 
-Keep passwords, browser autofill, tokens, network authorization headers and local .env files out of captures.
+- [ ] Leave an unfinished new-reading draft and a deliberately selected historical report date open across Asia/Kolkata midnight. Confirm the current-date limit advances and both selection and draft remain unchanged.
+- [ ] Repeat with an existing reading open for editing; preserve its date/slot/value.
+- [ ] Background the tab across midnight, then resume/focus it. Confirm it refreshes the server date without remounting the form.
+- [ ] Disconnect and reconnect: retain existing input, recover configuration and show API errors honestly if saving while offline.
 
-## Suggested demo recording
+For a simulated rollover, use a separate test environment with controlled browser/server clocks. Changing only the browser clock must not be treated as changing the server's authoritative date. No production clock or real user records should be changed for the demonstration.
 
-- 0:00?0:25: introduce the stack, register or log in with the demo account.
-- 0:25?1:05: add a reading and demonstrate duplicate/value/date validation.
-- 1:05?1:45: edit/delete a reading and show daily, MTD and previous-month reports.
-- 1:45?2:15: demonstrate mobile layout and logout.
-- 2:15?2:45: show passing backend tests, project structure and README setup instructions.
+## Actual screenshots to capture
 
-Upload or share only after reviewing the recording and choosing the assignment's requested destination.
+No screenshot files have been generated by this task. After completing the checks, save genuine PNG captures here:
+
+| File                | Content                                        |
+| ------------------- | ---------------------------------------------- |
+| 01-login.png        | Glucon login/registration branding             |
+| 02-dashboard.png    | Selected-day KPIs, add form and daily readings |
+| 03-analytics.png    | MTD trend chart and previous-month summary     |
+| 04-history-edit.png | History with an edit in progress               |
+| 05-validation.png   | Clear duplicate-slot or invalid-value error    |
+| 06-mobile.png       | Dashboard at approximately 390px width         |
+
+Keep a short QA record with the date, browser/version, viewport, observed result and any unresolved issue. Prepare the recording only after the demonstrated workflows pass. Upload nothing without reviewing it and obtaining approval for external publication.

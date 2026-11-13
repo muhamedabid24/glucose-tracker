@@ -44,7 +44,7 @@ function App() {
     });
   }, [retry]);
   return (
-    <div className="shell">
+    <div className={token ? "shell" : "shell auth-page"}>
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -152,15 +152,15 @@ function Auth({ register, setRegister, onLogin, notice }) {
   return (
     <main id="main-content" className="auth-layout" tabIndex="-1">
       <section className="auth-intro">
-        <span className="eyebrow">A LITTLE CHECK-IN. A CLEARER PICTURE.</span>
+        <span className="eyebrow">SMARTER GLUCOSE MANAGEMENT</span>
         <h1>
-          Small moments.
+          Better tracking.
           <br />
-          <em>Better understanding.</em>
+          <em>Clearer insights.</em>
         </h1>
         <p>
-          Keep your glucose readings in one calm place. See your patterns, one
-          day at a time.
+          Record your glucose levels, review daily trends, and keep your health
+          information organized in one place.
         </p>
       </section>
       <section className="panel auth-card">

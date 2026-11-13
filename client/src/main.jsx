@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ProfileControls } from "./components/ProfileModal";
+import { PasswordField } from "./components/PasswordField";
 import { ActionNotice } from "./components/ActionNotice";
 import { ReportDateNavigation } from "./components/ReportDateNavigation";
 import { createRoot } from "react-dom/client";
@@ -207,17 +208,14 @@ function Auth({ register, setRegister, onLogin, notice }) {
               required
             />
           </label>
-          <label>
-            Password
-            <input
-              name="password"
-              type="password"
-              autoComplete={register ? "new-password" : "current-password"}
-              placeholder={register ? "At least 8 characters" : "Your password"}
-              minLength={register ? 8 : undefined}
-              required
-            />
-          </label>
+          <PasswordField
+            id="auth-password"
+            name="password"
+            autoComplete={register ? "new-password" : "current-password"}
+            placeholder={register ? "At least 8 characters" : "Your password"}
+            minLength={register ? 8 : undefined}
+            required
+          />
           {error && (
             <p role="alert" className="field-error">
               {error}

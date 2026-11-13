@@ -1,58 +1,60 @@
-# Glucon final-corrections verification
+# Glucon reliability and submission verification
 
-Verification date: 12 November 2026 (client context, Asia/Kolkata). This document records executed checks and limitations; it is not a browser QA certificate or a Kenpath submission.
+Verification date: 13 November 2026, Asia/Kolkata. Work remains on `glucon-final-v2`. This is an evidence record, not a browser QA certificate or an external submission.
 
-## Changes in this correction series
+## Profile API investigation
 
-1. Server-authoritative reporting configuration now refreshes near configured midnight, at minute-capped intervals after completed requests, on window focus, visible-tab resume and reconnect. Browser time only schedules requests. Existing selected report and reading-form state are not reset or remounted by this change.
-2. README and capture instructions now describe Glucon, the implemented MTD SVG chart, service-specific commands, environment setup, Notes and pending publication accurately.
-3. Persistent regression tests, this evidence record, and a timed real-recording storyboard strengthen final submission preparation.
+The running API at port 5000 currently returns 401 for unauthenticated GET `/api/profile` and 200 for the existing demo account's authenticated GET. The returned registered name and optional fields match PostgreSQL; only id, name, age and weight are returned. The frontend API base resolves to localhost:5000/api; GET/PATCH paths and Express registration agree. The process started after the profile route source was added. Nullable age/weight columns already exist, so no additional migration was required in this pass.
 
-Backend application code, API routes, report calculations, authentication implementation, PostgreSQL pool/schema, CSS, environment files and existing application rows are unchanged by this series. Backend tests use only their generated fixture schema.
+The reported 404 is not reproducible against the current running backend. A previously running backend without the new route is a plausible explanation, but the original failing process/request cannot be conclusively reconstructed. No duplicate endpoint was added. A 404 now produces an actionable restart/retry message in the modal, preserving its draft. README documents checking the running server and using the existing nodemon development command. The actual running endpoint was verified before claiming it works.
 
-## Executed checks
+## Implemented improvements
 
-| Check                                                              | Result                                                                                                                                     |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm test` in `server` (`npm --prefix server test` from root)      | PASS: one Jest/Supertest suite, 29 tests against real PostgreSQL; final run 6.008 seconds                                                  |
-| `npm test` in `client` (`npm --prefix client test` from root)      | PASS: 12 Node test-runner date-refresh tests                                                                                               |
-| `npm run build` in `client`                                        | PASS: Vite production build                                                                                                                |
-| Cached Prettier check on changed source/tests and README/checklist | PASS; formatting is not linting                                                                                                            |
-| `node --check` on tracked backend JavaScript                       | PASS: 13 files                                                                                                                             |
-| Environment-example coverage                                       | PASS: every statically referenced server/client configuration variable is present in root `.env.example`; examples retain placeholders     |
-| Lockfile/manifest dependency comparison                            | PASS: client/server declarations match their lockfiles; no dependency added                                                                |
-| Direct Express and Vite startup                                    | PASS: temporary ports 5061 and 5181; verification listeners stopped afterward                                                              |
-| Raw-HTTP smoke requests                                            | PASS: health, served Glucon title, date watcher initial/focus loads against real config API, existing demo login and authenticated history |
-| Existing redesign/branding ancestry                                | PASS: commits `16d7f1a` and `3650005` remain ancestors                                                                                     |
-| Remote read-only check                                             | `origin/main` observed at `611d262476c23fef299b7dd4c6a6144f950697f8`; final corrections remain local, no push performed                    |
-| Staged-file/secret checks                                          | Per-commit allowlists and checks for current configured DB password/JWT secret; no real secret values printed or staged                    |
+- Previous Day, Today and Next Day controls use server-configured today and calendar-date arithmetic, preserving the reporting timezone and existing report calculations. Future navigation and dates before 1900-01-01 are blocked.
+- Existing action feedback is reused as persistent dismissible live-region notifications, with errors retained inline where appropriate. Profile errors remain in the active modal; success is announced after closing it.
+- Reading submission and confirmed deletion have synchronous in-flight guards. Existing delete confirmation is reused.
+- Responsive safeguards allow navigation/header wrapping, KPI unit wrapping, bounded notifications, table-contained scrolling and smaller statistic text only on very narrow viewports. Backgrounds, widget colors and existing forms/charts remain intact.
+- Tests cover real React components in jsdom and backend persistence in isolated PostgreSQL schemas. No dependency was added in this pass.
 
-An initial Vite build caught a leftover line during effect replacement. It was corrected before the first correction commit; subsequent builds pass.
+## Final executed checks
 
-Initial fetch-based startup probes failed in this execution environment. A raw Node HTTP diagnostic reached the listening servers successfully, and the raw-HTTP smoke checks above passed. No application fetch implementation was changed to mask this difference. Browser fetch/CORS and complete user interactions remain manual verification items.
+| Command/check                                        | Result                                                                                                                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm --prefix server test`                           | PASS: 46 Jest/Supertest tests, one suite, final run 6.182 seconds                                                                                      |
+| `npm --prefix client test`                           | PASS: 54 Node/DOM tests, zero failures or skipped tests                                                                                                |
+| `npm --prefix client run build`                      | PASS: Vite production build, 31 transformed modules                                                                                                    |
+| Cached Prettier checks                               | PASS on changed source/tests/docs; formatting is not linting                                                                                           |
+| Backend profile-route/migration-script syntax checks | PASS                                                                                                                                                   |
+| Live API/DB read-only checks                         | PASS: expected unauthenticated 401, demo login, authenticated profile 200, PostgreSQL field match and sensitive-field exclusion                        |
+| Migration check                                      | Existing nullable age/weight fields found; no new migration/data rewrite performed                                                                     |
+| Source and environment checks                        | No configured real secret values or common credential patterns found in inspected source; actual environment files and generated paths are not tracked |
+| Dependency manifests/lockfiles                       | Match; lint scripts are absent in both packages                                                                                                        |
+| Branch/history                                       | Still glucon-final-v2; existing history preserved; no commits, pushes or visibility changes performed                                                  |
 
-## Regression coverage added
+Initial extended DOM tests encountered missing jsdom scrolling and browser FormData behavior. The test harness was corrected with explicit shims; app validation/authentication code was not weakened, and the final exact frontend command passes. jsdom still has no layout engine or native modal top layer.
 
-Frontend: Kolkata midnight scheduling, authoritative server-date rollover, focus/visibility/reconnect, failed refresh recovery, overlapping-request races, cleanup, December/January, leap-day transitions, configured non-default timezone and invalid refresh configuration.
+## What the tests support
 
-Backend: exact invalid values including 108.5/negative/nonnumeric/empty on create and update, accepted 40/108/600 with create-update-GET-SQL-delete persistence, unauthenticated mutations, independent users sharing a date/slot, duplicate After lunch/fifth-reading rejection, and the October 2026 report-range example. Existing authentication, ownership, future-date, report-statistics and empty-report tests remain intact.
+The real-database backend suite verifies registration/login, bcrypt hashing, JWT failures, user isolation, reading CRUD, integer boundaries/invalid values, duplicates/four slots, future dates, daily/MTD/previous-month statistics, empty reports, profile validation, scoped profile access, and persistence across a renewed login session. It does not delete/reset existing application records.
 
-## Skipped or unverified
+Frontend tests execute the real React app with mocked API responses. They verify signup/login/logout transitions, click-only profile opening, cancellation/save/reopen behavior, updated header name, profile retention after logout/login, actionable stale-server messages, success/error feedback, reading create/edit boundaries and future-date rejection, duplicate-submit protection, delete confirmation, report refresh/date navigation, unfinished draft preservation and date-rollover handling. Those are DOM-level tests, not real-browser or end-to-end network proof.
 
-- Browser automation: unavailable in this session; no browser package was installed.
-- Complete UI registration/login/logout/CRUD, all form validations, browser fetch/CORS, responsive layout, keyboard focus and browser draft preservation: NOT VERIFIED by this correction series. See `screenshots/README.md`.
-- Lint: neither package defines a lint script; no lint pass is claimed and no unrelated lint dependencies were added.
-- Actual screenshots and screen recording: NOT CAPTURED. `screenshots/DEMO_SCRIPT.md` supplies a 2:45 storyboard and the screenshot README supplies the real-capture checklist.
-- Fresh clone/clean dependency installation: not performed; lockfile consistency and existing installation were verified.
-- Public GitHub access: NOT CONFIRMED. Verify the intended URL in a signed-out browser; do not equate authenticated Git access with public access.
-- External publication/submission: not performed. Git push, visibility changes, video uploads and Kenpath submission require owner approval.
+## GitHub and submission artifacts
 
-## Final manual actions
+Origin: https://github.com/muhamedabid24/glucose-tracker
 
-1. Complete the browser checklist on disposable fixtures, including midnight/focus behavior with an unfinished new/edit form.
-2. Capture and review genuine screenshots and a 2-3 minute video.
-3. Review local commits and approve publication; push the intended branch only after approval.
-4. Confirm GitHub contains the latest commit and is accessible to the evaluator; verify any video permissions.
-5. Submit the approved repository/demo links through Kenpath's requested channel.
+Read-only Git access found remote `glucon-final-v2` at `8e727951c05f39a5dec25da545ed926b5a3efbe2`, matching committed local HEAD. The working-tree profile/reliability changes are not yet committed or published. Anonymous repository and branch API checks returned 404; public evaluator access is NOT VERIFIED and must be checked signed out. Do not equate authenticated Git access with public access.
 
-Status: **INSUFFICIENT VERIFICATION** until browser QA and real media are completed. The implemented correction, automated regression checks and local build are complete; publication is intentionally pending approval.
+`screenshots/` contains checklist and demo-script Markdown files, not actual screenshots or video. Media capture remains pending. No fake artifacts were generated.
+
+## Remaining verification and actions
+
+- Real browser authentication/CRUD/profile/report navigation and browser fetch/CORS: NOT VERIFIED in this pass; no browser automation tool is available.
+- Desktop/tablet/mobile visual rendering, native dialog focus/inert behavior, and actual scrolling: NOT VERIFIED. CSS safeguards and DOM tests are not substitutes for viewport QA.
+- Clean-clone installation and seed creation: not rerun in this existing workspace. The current demo login works; seed/setup instructions and package declarations were inspected.
+- Lint: no configured scripts; no lint pass claimed.
+- Actual screenshots/demo recording: PENDING.
+- Review/stage/commit/push the intended files only after owner review; confirm signed-out branch access and then submit through Kenpath's requested channel.
+- Optional search/filtering, CSV export, chart changes and an About section were not implemented.
+
+Status: **INSUFFICIENT VERIFICATION** for final submission until real-browser QA, real media, publication review and evaluator access checks are completed. Automated checks and live read-only profile verification pass.

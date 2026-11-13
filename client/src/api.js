@@ -17,6 +17,7 @@ export async function api(path, { token, body, method = "GET", signal } = {}) {
   if (!response.ok) {
     const error = new Error(data.message || "Unable to complete request.");
     error.status = response.status;
+    error.errors = data.errors;
     throw error;
   }
   return data;

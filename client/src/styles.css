@@ -71,6 +71,24 @@ main:focus {
   margin: auto;
   padding: 0 48px;
 }
+/* A viewport-sized image stays proportionate while long dashboard content scrolls. */
+.dashboard-page {
+  min-height: 100svh;
+  isolation: isolate;
+  background: transparent;
+}
+.dashboard-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #f5f8f7;
+  background-image: url("/images/glucon-dashboard-background.png");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
 .skip-link {
   position: fixed;
   top: 10px;
@@ -140,6 +158,56 @@ main:focus {
   color: var(--muted);
   font-size: 12px;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.top-label {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal.profile-modal {
+  max-width: 480px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: 0 18px 60px #123d3826;
+}
+.modal.profile-modal::backdrop {
+  background: #123d3859;
+}
+.profile-modal fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.profile-modal label {
+  margin-bottom: 8px;
+}
+.profile-modal label .muted {
+  margin-left: 5px;
+  font-size: 10px;
+}
+.profile-modal input {
+  margin-top: 0;
+}
+.profile-close {
+  min-width: 44px;
+  padding: 8px;
+}
+.profile-field-error {
+  display: block;
+  margin-top: 7px;
+  color: #9e3030;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .quiet {
   background: transparent;
   border-color: #d3e3df;
@@ -180,6 +248,7 @@ p {
 }
 .dashboard-heading {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
@@ -190,6 +259,22 @@ p {
 }
 .dashboard-heading p {
   margin: 8px 0 0;
+}
+.report-date-controls {
+  flex: 0 1 340px;
+  min-width: 0;
+  max-width: 100%;
+}
+.date-navigation {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.date-navigation button {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 8px;
+  font-size: 11px;
 }
 .date-picker {
   min-width: 206px;
@@ -278,6 +363,8 @@ p {
 }
 .kpi-value {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 4px;
   align-items: baseline;
   gap: 9px;
   margin: 11px 0 8px;
@@ -559,6 +646,7 @@ small {
   margin: 8px 0 22px;
 }
 .table-scroll {
+  max-width: 100%;
   overflow-x: auto;
 }
 table {
@@ -622,6 +710,25 @@ td strong {
   font-size: 13px;
   line-height: 1.6;
 }
+.notice-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 5;
+  width: max-content;
+  max-width: min(440px, calc(100vw - 32px));
+  margin: 0;
+  border: 1px solid currentColor;
+  box-shadow: 0 8px 28px #123d3814;
+}
+.notice-toast > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.notice-toast button {
+  min-height: 44px;
+  flex-shrink: 0;
+}
 .notice button {
   background: transparent;
   color: inherit;
@@ -640,6 +747,7 @@ td strong {
   color: #236341;
 }
 .field-error {
+  overflow-wrap: anywhere;
   padding: 12px;
   border-radius: 10px;
   font-size: 12px;
@@ -815,6 +923,19 @@ footer {
   }
 }
 @media (max-width: 760px) {
+  .topbar:has(.header-actions) {
+    height: auto;
+    min-height: 86px;
+    flex-wrap: wrap;
+    padding-top: 16px;
+    gap: 16px;
+  }
+  .topbar:has(.header-actions) .header-nav {
+    order: 3;
+    width: 100%;
+    height: 40px;
+  }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -852,6 +973,21 @@ footer {
   }
 }
 @media (max-width: 480px) {
+  .report-date-controls {
+    flex-basis: auto;
+    width: 100%;
+  }
+  .notice-toast {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    width: auto;
+  }
+
+  .dashboard-page::before {
+    background-position: 60% top;
+  }
+
   .shell {
     padding: 0 16px;
   }
@@ -983,6 +1119,11 @@ footer {
   }
   .button-row {
     flex-wrap: wrap;
+  }
+}
+@media (max-width: 360px) {
+  .stats dd {
+    font-size: 18px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

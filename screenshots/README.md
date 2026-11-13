@@ -51,3 +51,12 @@ Keep a short QA record with the date, browser/version, viewport, observed result
 ## Recording and automated evidence
 
 Use [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a practical 2:45 recording storyboard and disposable fixture setup. See [VERIFICATION.md](../VERIFICATION.md) for executed automated/runtime checks and explicit limitations. Neither document substitutes for completing the manual checkboxes or capturing real media.
+
+## Final reliability checks (manual, still pending)
+
+- [ ] Use Previous Day, Today and Next Day; verify all report ranges refresh and Next Day is disabled at today in the configured timezone.
+- [ ] Leave a reading draft unfinished while changing the report date; confirm its date/slot/value remain intact.
+- [ ] Confirm add/edit/delete/profile success notifications can be dismissed, errors are readable, and rapid repeated actions create only one mutation while pending.
+- [ ] Open My Profile only from its button, save, log out and log back in, then reopen to verify persisted values. Check no sensitive fields appear in API responses or captured media.
+- [ ] Inspect 320px, 390px, 768px and desktop widths, including KPI units, navigation, long names/errors, notification wrapping, profile scrolling and the history table's internal horizontal scroll.
+- [ ] Verify the published glucon-final-v2 branch and demo link in a signed-out browser after approved publication.

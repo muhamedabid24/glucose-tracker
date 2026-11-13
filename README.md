@@ -18,7 +18,7 @@ The chart is implemented without a chart dependency. It shows saved entries in d
 
 ## Requirements
 
-- Node.js 20.19+ or 22.12+; development verification used Node 24.13.0 and npm 11.6.2.
+- Node.js 20.19+ (20.x), 22.13+ (22.x), or 24+; development verification used Node 24.13.0 and npm 11.6.2.
 - PostgreSQL with an existing or newly created database named `sweety_db`.
 - A database role allowed to create tables/indexes. Backend integration tests additionally require CREATE SCHEMA permission.
 
@@ -155,8 +155,11 @@ client/
   src/api.js                         Fetch wrapper and API URL
   src/reportingDate.js               Server-authoritative date refresh lifecycle
   src/components/JournalPanels.jsx   KPIs, reports, trend chart and delete dialog
+  src/components/ProfileModal.jsx    Click-only authenticated profile modal
+  src/components/ReportDateNavigation.jsx  Calendar navigation controls
+  src/components/ActionNotice.jsx    Shared accessible action notifications
   src/styles.css                     Existing responsive Glucon design
-  tests/                             Date-refresh regression tests
+  tests/                             Date, profile and dashboard DOM regression tests
 server/
   index.js                           Environment and server lifecycle
   src/app.js                         Express app and error handling
@@ -189,4 +192,26 @@ Configured origin: `https://github.com/muhamedabid24/glucose-tracker`. Public ac
 
 Existing redesign and branding commits are preserved. Final corrections are committed locally; publication requires the owner's approval. Do not assume the remote contains local commits. Inspect `git status`, `git branch -vv` and `git log --oneline origin/main..HEAD`; the tracking ref reflects the last remote observation.
 
-Before submission, rerun automated checks, complete manual QA, capture real screenshots or a 2-3 minute demonstration, inspect staged/tracked files for secrets and confirm the intended branch. After explicit approval, push using `git push origin main`. Recheck signed-out access and that GitHub shows the intended latest commit. Then submit the repository/demo links through Kenpath's requested channel. No automatic push, visibility change, email or submission is performed.
+Before submission, rerun automated checks, complete manual QA, capture real screenshots or a 2-3 minute demonstration, inspect staged/tracked files for secrets and confirm the intended branch. After explicit approval, publish the current submission branch using `git push -u origin glucon-final-v2`. Recheck signed-out access and that GitHub shows the intended latest commit. Then submit the repository/demo links through Kenpath's requested channel. No automatic push, visibility change, email or submission is performed.
+
+## My Profile popup
+
+The authenticated header has a My Profile button immediately before Log out. The form is not mounted or fetched until that button is clicked; opening it does not navigate or change the URL. Cancel, X, Escape and an outside click discard unsaved changes. Dismissal is blocked while saving. A successful save updates the header name and closes the dialog. Reopening fetches the latest saved profile.
+
+The native modal dialog blocks background interaction, manages focus, supports Tab wrapping and restores focus to its trigger. Native browser top-layer behavior and responsive appearance still require browser QA; DOM tests emulate only dialog open/close methods.
+
+`GET /api/profile` and `PATCH /api/profile` require the existing Bearer token and use only the authenticated user ID. PATCH permits only name, age and weight; account identifiers, email and credentials cannot be changed through it. Name is required (1-100 trimmed characters). Age is optional, a whole number from 0 to 130 years. Weight is optional, above 0 and up to 500 kg with at most two decimal places. Blank optional fields are stored as SQL NULL.
+
+For an existing database, apply the additive migration with `npm --prefix server run db:profile`, then restart Express to load the new route. Full `db:setup` also applies it. The idempotent migration adds missing nullable columns and constraints without updating existing user data or readings. Profile values persist in PostgreSQL only after Save Changes.
+
+Frontend DOM regression tests use jsdom as a development-only dependency and Vite's JSX transformer. Run `npm --prefix client test`; backend integration coverage runs with `npm --prefix server test`. No browser screenshots or native accessibility pass is claimed from those tests alone.
+
+## Reliability and report-date navigation
+
+Previous Day, Today and Next Day use the current reporting date returned by `/api/config`, not the browser's local timezone. Next Day is disabled at today; the minimum supported date remains 1900-01-01. Changing the selected date refreshes all three report requests without resetting an unfinished reading draft or changing report-range/calculation logic.
+
+Reading add/edit/delete and profile-save success messages reuse a persistent, dismissible live-region notification. Request errors are shown through the existing field/modal errors and action feedback. Delete still requires its existing confirmation dialog. Synchronous in-flight guards prevent duplicate reading submissions and repeated confirmed deletion while requests are pending.
+
+If My Profile reports `Endpoint not found.`, first check the running process, not only the source files. The expected endpoints are GET and PATCH `http://localhost:5000/api/profile`. An unauthenticated GET must return 401, while 404 indicates the contacted server does not expose that route. Stop the old backend terminal with Ctrl+C and run `npm --prefix server run dev` from this project root (or restart `npm --prefix server start`). Nodemon is already installed and watches server code in development. Keep only one backend on the configured port. If profile columns are missing, run the documented `db:profile` migration; a database-column error is not the same as an endpoint 404. The modal now provides a restart/retry message for a stale server while preserving unsaved input.
+
+The current automated suite also mounts the actual React app in jsdom with mocked API responses to test signup/login/logout transitions, profile reopen after login, notifications, duplicate-submit prevention, delete confirmation and report navigation. PostgreSQL-backed backend tests separately verify real persistence and isolation. jsdom shims FormData, native-dialog methods and scrolling where needed; it has no browser layout engine. Do not interpret those tests as a browser, mobile, visual or native-accessibility pass.

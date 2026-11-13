@@ -9,7 +9,8 @@
     "test": "jest --runInBand",
     "db:setup": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
-    "test:integration": "jest --runInBand tests/integration.test.js"
+    "test:integration": "jest --runInBand tests/integration.test.js",
+    "db:profile": "node scripts/migrateProfile.js"
   },
   "keywords": [],
   "author": "",

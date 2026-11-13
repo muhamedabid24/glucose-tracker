@@ -1,4 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ProfileControls } from "./components/ProfileModal";
+import { ActionNotice } from "./components/ActionNotice";
+import { ReportDateNavigation } from "./components/ReportDateNavigation";
 import { createRoot } from "react-dom/client";
 import { api } from "./api";
 import { watchReportingDate } from "./reportingDate";
@@ -20,6 +23,15 @@ function App() {
   const [token, setToken] = useState(
     () => sessionStorage.getItem(tokenKey) || "",
   );
+  const [displayName, setDisplayName] = useState("");
+  const loadProfile = useCallback(
+    (signal) => api("/profile", { token, signal }),
+    [token],
+  );
+  const saveProfile = useCallback(
+    (body) => api("/profile", { token, method: "PATCH", body }),
+    [token],
+  );
   const [register, setRegister] = useState(false);
   const [notice, setNotice] = useState(null);
   const [config, setConfig] = useState(null);
@@ -28,6 +40,7 @@ function App() {
   function logout(message) {
     sessionStorage.removeItem(tokenKey);
     setToken("");
+    setDisplayName("");
     setNotice(message ? { error: true, text: message } : null);
   }
   useEffect(() => {
@@ -44,7 +57,7 @@ function App() {
     });
   }, [retry]);
   return (
-    <div className={token ? "shell" : "shell auth-page"}>
+    <div className={token ? "shell dashboard-page" : "shell auth-page"}>
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -64,24 +77,23 @@ function App() {
             <a href="#reading-history">History</a>
           </nav>
         )}
-        <span className="top-label">Personal glucose journal</span>
+        <span className="top-label">
+          {displayName ? `Hello, ${displayName}` : "Personal glucose journal"}
+        </span>
         {token && (
-          <button className="quiet" onClick={() => logout()}>
-            Log out
-          </button>
+          <ProfileControls
+            loadProfile={loadProfile}
+            saveProfile={saveProfile}
+            onLogout={() => logout()}
+            onUnauthorized={logout}
+            onSaved={({ profile, message }) => {
+              setDisplayName(profile.name);
+              setNotice({ text: message });
+            }}
+          />
         )}
       </header>
-      {notice && (
-        <div
-          role={notice.error ? "alert" : "status"}
-          className={`notice ${notice.error ? "error" : "success"}`}
-        >
-          {notice.text}
-          <button aria-label="Dismiss message" onClick={() => setNotice(null)}>
-            Close
-          </button>
-        </div>
-      )}
+      <ActionNotice notice={notice} onDismiss={() => setNotice(null)} />
       {!token ? (
         <Auth
           register={register}
@@ -240,6 +252,7 @@ function Dashboard({ token, config, notice, logout }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const deleteInFlight = useRef(false);
   const formRef = useRef(null);
   const fail = (error) => {
     if (error.status === 401) logout(error.message);
@@ -272,6 +285,8 @@ function Dashboard({ token, config, notice, logout }) {
     return () => controller.abort();
   }, [date, revision, token]);
   async function remove() {
+    if (deleteInFlight.current || !deleting) return;
+    deleteInFlight.current = true;
     setDeleteBusy(true);
     try {
       await api("/readings/" + deleting.id, { token, method: "DELETE" });
@@ -282,6 +297,7 @@ function Dashboard({ token, config, notice, logout }) {
     } catch (error) {
       fail(error);
     } finally {
+      deleteInFlight.current = false;
       setDeleteBusy(false);
     }
   }
@@ -296,20 +312,12 @@ function Dashboard({ token, config, notice, logout }) {
           <h1>Your glucose journal</h1>
           <p>Record your readings and review your daily patterns.</p>
         </div>
-        <label className="date-picker">
-          Report date
-          <input
-            type="date"
-            value={date}
-            max={config.today}
-            min="1900-01-01"
-            onChange={(e) => {
-              if (e.target.value && e.target.validity.valid)
-                setDate(e.target.value);
-            }}
-          />
-          <small>{config.timezone}</small>
-        </label>
+        <ReportDateNavigation
+          date={date}
+          today={config.today}
+          timezone={config.timezone}
+          onChange={setDate}
+        />
       </div>
       {error && (
         <div className="notice error" role="alert">
@@ -342,6 +350,7 @@ function Dashboard({ token, config, notice, logout }) {
               notice({ text: message });
             }}
             onUnauthorized={logout}
+            onError={fail}
           />
         </section>
         <section
@@ -465,14 +474,17 @@ function ReadingForm({
   onCancel,
   onSaved,
   onUnauthorized,
+  onError,
 }) {
   const [date, setDate] = useState(editing?.date || selectedDate);
   const [slot, setSlot] = useState(editing?.slot || SLOTS[0]);
   const [value, setValue] = useState(editing?.value ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   async function submit(event) {
     event.preventDefault();
+    if (submitting.current) return;
     setError("");
     if (
       value === "" ||
@@ -487,6 +499,7 @@ function ReadingForm({
       setError("Choose a date that is not in the future.");
       return;
     }
+    submitting.current = true;
     setBusy(true);
     try {
       const result = await api(
@@ -501,13 +514,16 @@ function ReadingForm({
       onSaved(result.message);
     } catch (error) {
       if (error.status === 401) onUnauthorized(error.message);
-      else
-        setError(
+      else {
+        const message =
           error.message === "Failed to fetch"
             ? "Cannot reach the API. Please try again."
-            : error.message,
-        );
+            : error.message;
+        setError(message);
+        onError?.({ message, status: error.status });
+      }
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }

@@ -29,6 +29,15 @@ beforeAll(async () => {
   );
   await pool.query(sql);
   await pool.query(sql); // Reproducibility includes idempotency.
+  const profileMigration = require("fs").readFileSync(
+    require("path").join(
+      __dirname,
+      "../src/db/migrations/001_user_profile.sql",
+    ),
+    "utf8",
+  );
+  await pool.query(profileMigration);
+  await pool.query(profileMigration);
 }, 20000);
 afterAll(async () => {
   try {
@@ -431,4 +440,168 @@ test("report ranges match the October 2026 assignment example", () => {
   expect(range("daily", "2026-10-15")).toEqual(["2026-10-15", "2026-10-15"]);
   expect(range("mtd", "2026-10-15")).toEqual(["2026-10-01", "2026-10-15"]);
   expect(range("monthly", "2026-10-15")).toEqual(["2026-09-01", "2026-09-30"]);
+});
+
+test("profile endpoints require authentication", async () => {
+  expect((await request(app).get("/api/profile")).status).toBe(401);
+  expect(
+    (await request(app).patch("/api/profile").send({ name: "Unauthorized" }))
+      .status,
+  ).toBe(401);
+});
+test("new profile optional fields are null; sensitive fields are excluded", async () => {
+  const response = await request(app)
+    .get("/api/profile")
+    .auth(token, { type: "bearer" });
+  expect(response.status).toBe(200);
+  expect(response.body.profile).toEqual({
+    id: userId,
+    name: "Test User",
+    age: null,
+    weight: null,
+  });
+});
+test("save, reopen, partially update and clear optional profile values", async () => {
+  const saved = await request(app)
+    .patch("/api/profile")
+    .auth(token, { type: "bearer" })
+    .send({ name: "  Updated User  ", age: 35, weight: 72.55 });
+  expect(saved.status).toBe(200);
+  expect(saved.body.profile).toEqual({
+    id: userId,
+    name: "Updated User",
+    age: 35,
+    weight: 72.55,
+  });
+  const reopened = await request(app)
+    .get("/api/profile")
+    .auth(token, { type: "bearer" });
+  expect(reopened.body.profile).toEqual(saved.body.profile);
+  const partial = await request(app)
+    .patch("/api/profile")
+    .auth(token, { type: "bearer" })
+    .send({ age: 0 });
+  expect(partial.body.profile).toMatchObject({
+    name: "Updated User",
+    age: 0,
+    weight: 72.55,
+  });
+  const cleared = await request(app)
+    .patch("/api/profile")
+    .auth(token, { type: "bearer" })
+    .send({ age: null, weight: null });
+  expect(cleared.status).toBe(200);
+  expect(cleared.body.profile).toMatchObject({ age: null, weight: null });
+});
+test.each([
+  { name: "" },
+  { name: " " },
+  { name: "x".repeat(101) },
+  { age: -1 },
+  { age: 131 },
+  { age: 25.5 },
+  { age: "25" },
+  { weight: 0 },
+  { weight: -1 },
+  { weight: 501 },
+  { weight: 72.555 },
+  { weight: "72" },
+])(
+  "invalid profile %j is rejected without changing saved data",
+  async (body) => {
+    const before = (
+      await request(app).get("/api/profile").auth(token, { type: "bearer" })
+    ).body.profile;
+    const response = await request(app)
+      .patch("/api/profile")
+      .auth(token, { type: "bearer" })
+      .send(body);
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toBeDefined();
+    expect(
+      (await request(app).get("/api/profile").auth(token, { type: "bearer" }))
+        .body.profile,
+    ).toEqual(before);
+  },
+);
+test("profile cannot target or overwrite another user; credentials are preserved", async () => {
+  const otherBefore = (
+    await request(app).get("/api/profile").auth(otherToken, { type: "bearer" })
+  ).body.profile;
+  const credentialsBefore = (
+    await pool.query("SELECT email,password_hash FROM users WHERE id=$1", [
+      userId,
+    ])
+  ).rows[0];
+  expect(
+    (
+      await request(app)
+        .patch("/api/profile")
+        .auth(token, { type: "bearer" })
+        .send({ id: otherBefore.id, name: "Hijacked" })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await request(app)
+        .patch("/api/profile")
+        .auth(token, { type: "bearer" })
+        .send({ email: "changed@example.test" })
+    ).status,
+  ).toBe(400);
+  const read = await request(app)
+    .get("/api/profile?user_id=" + userId)
+    .auth(otherToken, { type: "bearer" });
+  expect(read.body.profile).toEqual(otherBefore);
+  const saved = await request(app)
+    .patch("/api/profile")
+    .auth(token, { type: "bearer" })
+    .send({ name: "Own Account", weight: 500 });
+  expect(saved.status).toBe(200);
+  expect(
+    (
+      await request(app)
+        .get("/api/profile")
+        .auth(otherToken, { type: "bearer" })
+    ).body.profile,
+  ).toEqual(otherBefore);
+  expect(
+    (
+      await pool.query("SELECT email,password_hash FROM users WHERE id=$1", [
+        userId,
+      ])
+    ).rows[0],
+  ).toEqual(credentialsBefore);
+});
+
+test("profile persists in PostgreSQL across renewed login sessions without exposing sensitive fields", async () => {
+  const body = { name: "Persistent Profile", age: 42, weight: 80.25 };
+  expect(
+    (
+      await request(app)
+        .patch("/api/profile")
+        .auth(token, { type: "bearer" })
+        .send(body)
+    ).status,
+  ).toBe(200);
+  const login = await request(app)
+    .post("/api/auth/login")
+    .send({ email: "test@example.test", password: "Password123!" });
+  expect(login.status).toBe(200);
+  const profile = await request(app)
+    .get("/api/profile")
+    .auth(login.body.token, { type: "bearer" });
+  expect(profile.status).toBe(200);
+  expect(profile.body.profile).toEqual({ id: userId, ...body });
+  expect(Object.keys(profile.body.profile).sort()).toEqual([
+    "age",
+    "id",
+    "name",
+    "weight",
+  ]);
+  const saved = await pool.query(
+    "SELECT name,age,weight::double precision AS weight FROM users WHERE id=$1",
+    [userId],
+  );
+  expect(saved.rows[0]).toEqual(body);
 });
